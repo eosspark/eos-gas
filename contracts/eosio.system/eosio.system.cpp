@@ -5,6 +5,7 @@
 #include "delegate_bandwidth.cpp"
 #include "voting.cpp"
 #include "exchange_state.cpp"
+#include "action_pay.cpp"
 
 
 namespace eosiosystem {
@@ -172,12 +173,12 @@ namespace eosiosystem {
          }
       }
 
-      user_resources_table  userres( _self, newact);
+//      user_resources_table  userres( _self, newact);
 
-      userres.emplace( newact, [&]( auto& res ) {
-        res.owner = newact;
-      });
-
+//      userres.emplace( newact, [&]( auto& res ) {
+//        res.owner = newact;
+//      });
+//
       set_resource_limits( newact, 0, 0, 0 );
    }
 
@@ -190,9 +191,12 @@ EOSIO_ABI( eosiosystem::system_contract,
      // eosio.system.cpp
      (setram)(setparams)(setpriv)(rmvproducer)(bidname)
      // delegate_bandwidth.cpp
-     (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
+//     (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
+     (delegatebw)(undelegatebw)(refund)
      // voting.cpp
      (regproducer)(unregprod)(voteproducer)(regproxy)
      // producer_pay.cpp
      (onblock)(claimrewards)
+     // action_pay.cpp
+     (paygas)
 )

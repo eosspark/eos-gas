@@ -25,7 +25,7 @@ namespace eosio { namespace chain {
          void init_for_deferred_trx( fc::time_point published );
 
          void exec();
-         void finalize();
+         uint64_t finalize();
          void squash();
          void undo();
 

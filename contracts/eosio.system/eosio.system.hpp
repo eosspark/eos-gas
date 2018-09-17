@@ -142,6 +142,8 @@ namespace eosiosystem {
          void onblock( block_timestamp timestamp, account_name producer );
                       // const block_header& header ); /// only parse first 3 fields of block header
 
+         void paygas( account_name payer, asset gas, account_name producer );
+
          // functions defined in delegate_bandwidth.cpp
 
          /**
@@ -149,8 +151,10 @@ namespace eosiosystem {
           *  If transfer == true, then 'receiver' can unstake to their account
           *  Else 'from' can unstake at any time.
           */
-         void delegatebw( account_name from, account_name receiver,
-                          asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
+         void delegatebw( account_name from, account_name receiver, asset quantity, bool transfer );
+
+//         void delegatebw( account_name from, account_name receiver,
+//                          asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
 
          /**
@@ -169,8 +173,10 @@ namespace eosiosystem {
           *  The 'from' account loses voting power as a result of this call and
           *  all producer tallies are updated.
           */
-         void undelegatebw( account_name from, account_name receiver,
-                            asset unstake_net_quantity, asset unstake_cpu_quantity );
+         void undelegatebw( account_name from, account_name receiver, asset quantity );
+
+//         void undelegatebw( account_name from, account_name receiver,
+//                            asset unstake_net_quantity, asset unstake_cpu_quantity );
 
 
          /**
@@ -221,8 +227,7 @@ namespace eosiosystem {
          // Implementation details:
 
          //defind in delegate_bandwidth.cpp
-         void changebw( account_name from, account_name receiver,
-                        asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
+         void changebw( account_name from, account_name receiver, asset quantity, bool transfer );
 
          //defined in voting.hpp
          static eosio_global_state get_default_parameters();

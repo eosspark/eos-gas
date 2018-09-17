@@ -205,7 +205,7 @@ namespace eosio { namespace chain {
       }
    }
 
-   void transaction_context::finalize() {
+   uint64_t transaction_context::finalize() {
       EOS_ASSERT( is_initialized, transaction_exception, "must first initialize" );
 
       if( is_input ) {
@@ -256,8 +256,11 @@ namespace eosio { namespace chain {
 
       validate_cpu_usage_to_bill( billed_cpu_time_us );
 
-      rl.add_transaction_usage( bill_to_accounts, static_cast<uint64_t>(billed_cpu_time_us), net_usage,
-                                block_timestamp_type(control.pending_block_time()).slot ); // Should never fail
+
+
+      return static_cast<uint64_t>(billed_cpu_time_us) + net_usage * 10;
+//      rl.add_transaction_usage( bill_to_accounts, static_cast<uint64_t>(billed_cpu_time_us), net_usage,
+//                                block_timestamp_type(control.pending_block_time()).slot ); // Should never fail
    }
 
    void transaction_context::squash() {
@@ -269,23 +272,23 @@ namespace eosio { namespace chain {
    }
 
    void transaction_context::check_net_usage()const {
-      if (!control.skip_trx_checks()) {
-         if( BOOST_UNLIKELY(net_usage > eager_net_limit) ) {
-            if ( net_limit_due_to_block ) {
-               EOS_THROW( block_net_usage_exceeded,
-                          "not enough space left in block: ${net_usage} > ${net_limit}",
-                          ("net_usage", net_usage)("net_limit", eager_net_limit) );
-            }  else if (net_limit_due_to_greylist) {
-               EOS_THROW( greylist_net_usage_exceeded,
-                          "greylisted transaction net usage is too high: ${net_usage} > ${net_limit}",
-                          ("net_usage", net_usage)("net_limit", eager_net_limit) );
-            } else {
-               EOS_THROW( tx_net_usage_exceeded,
-                          "transaction net usage is too high: ${net_usage} > ${net_limit}",
-                          ("net_usage", net_usage)("net_limit", eager_net_limit) );
-            }
-         }
-      }
+//      if (!control.skip_trx_checks()) {
+//         if( BOOST_UNLIKELY(net_usage > eager_net_limit) ) {
+//            if ( net_limit_due_to_block ) {
+//               EOS_THROW( block_net_usage_exceeded,
+//                          "not enough space left in block: ${net_usage} > ${net_limit}",
+//                          ("net_usage", net_usage)("net_limit", eager_net_limit) );
+//            }  else if (net_limit_due_to_greylist) {
+//               EOS_THROW( greylist_net_usage_exceeded,
+//                          "greylisted transaction net usage is too high: ${net_usage} > ${net_limit}",
+//                          ("net_usage", net_usage)("net_limit", eager_net_limit) );
+//            } else {
+//               EOS_THROW( tx_net_usage_exceeded,
+//                          "transaction net usage is too high: ${net_usage} > ${net_limit}",
+//                          ("net_usage", net_usage)("net_limit", eager_net_limit) );
+//            }
+//         }
+//      }
    }
 
    void transaction_context::checktime()const {

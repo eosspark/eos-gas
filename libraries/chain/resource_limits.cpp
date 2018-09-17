@@ -174,15 +174,15 @@ void resource_limits_manager::add_pending_ram_usage( const account_name account,
 }
 
 void resource_limits_manager::verify_account_ram_usage( const account_name account )const {
-   int64_t ram_bytes; int64_t net_weight; int64_t cpu_weight;
-   get_account_limits( account, ram_bytes, net_weight, cpu_weight );
-   const auto& usage  = _db.get<resource_usage_object,by_owner>( account );
-
-   if( ram_bytes >= 0 ) {
-      EOS_ASSERT( usage.ram_usage <= ram_bytes, ram_usage_exceeded,
-                  "account ${account} has insufficient ram; needs ${needs} bytes has ${available} bytes",
-                  ("account", account)("needs",usage.ram_usage)("available",ram_bytes)              );
-   }
+//   int64_t ram_bytes; int64_t net_weight; int64_t cpu_weight;
+//   get_account_limits( account, ram_bytes, net_weight, cpu_weight );
+//   const auto& usage  = _db.get<resource_usage_object,by_owner>( account );
+//
+//   if( ram_bytes >= 0 ) {
+//      EOS_ASSERT( usage.ram_usage <= ram_bytes, ram_usage_exceeded,
+//                  "account ${account} has insufficient ram; needs ${needs} bytes has ${available} bytes",
+//                  ("account", account)("needs",usage.ram_usage)("available",ram_bytes)              );
+//   }
 }
 
 int64_t resource_limits_manager::get_account_ram_usage( const account_name& name )const {
