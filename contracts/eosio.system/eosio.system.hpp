@@ -132,7 +132,7 @@ namespace eosiosystem {
          global_state_singleton _global;
 
          eosio_global_state     _gstate;
-         rammarket              _rammarket;
+//         rammarket              _rammarket;
 
       public:
          system_contract( account_name s );
@@ -151,7 +151,7 @@ namespace eosiosystem {
           *  If transfer == true, then 'receiver' can unstake to their account
           *  Else 'from' can unstake at any time.
           */
-         void delegatebw( account_name from, account_name receiver, asset quantity, bool transfer );
+         void delegatebw( account_name from, account_name receiver, asset stake_quantity, bool transfer );
 
 //         void delegatebw( account_name from, account_name receiver,
 //                          asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
@@ -173,7 +173,7 @@ namespace eosiosystem {
           *  The 'from' account loses voting power as a result of this call and
           *  all producer tallies are updated.
           */
-         void undelegatebw( account_name from, account_name receiver, asset quantity );
+         void undelegatebw( account_name from, account_name receiver, asset unstake_quantity );
 
 //         void undelegatebw( account_name from, account_name receiver,
 //                            asset unstake_net_quantity, asset unstake_cpu_quantity );

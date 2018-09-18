@@ -1,3 +1,4 @@
+/*
 #include <exchange/exchange_state.hpp>
 
 namespace eosiosystem {
@@ -83,3 +84,4 @@ namespace eosiosystem {
 
 
 } /// namespace eosiosystem
+*/

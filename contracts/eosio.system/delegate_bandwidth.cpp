@@ -305,7 +305,7 @@ namespace eosiosystem {
 //                  }
                });
 
-               eosio_assert( asset(0) <= req->amount, "negative net refund amount" ); //should never happen
+               eosio_assert( asset(0) <= req->amount, "negative refund amount" ); //should never happen
 //               eosio_assert( asset(0) <= req->cpu_amount, "negative cpu refund amount" ); //should never happen
 
 //               if ( req->net_amount == asset(0) && req->cpu_amount == asset(0) ) {

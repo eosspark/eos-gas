@@ -1,3 +1,4 @@
+/*
 #pragma once
 
 #include <eosiolib/asset.hpp>
@@ -8,11 +9,13 @@ namespace eosiosystem {
 
    typedef double real_type;
 
-   /**
+   */
+/**
     *  Uses Bancor math to create a 50/50 relay between two asset types. The state of the
     *  bancor exchange is entirely contained within this struct. There are no external
     *  side effects associated with using this API.
-    */
+    *//*
+
    struct exchange_state {
       asset    supply;
 
@@ -38,3 +41,4 @@ namespace eosiosystem {
    typedef eosio::multi_index<N(rammarket), exchange_state> rammarket;
 
 } /// namespace eosiosystem
+*/

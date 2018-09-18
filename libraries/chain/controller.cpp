@@ -820,16 +820,7 @@ struct controller_impl {
             auto restore = make_block_restore_point();
 
             if (!trx->implicit) {
-               // pay gas action
-               try {
-                  auto gastrx = std::make_shared<transaction_metadata>( get_pay_gas_transaction(gas, trx->trx.actions[0].authorization[0].actor) );
-                  gastrx->implicit = true;
-                  auto trace = push_transaction( gastrx, fc::time_point::maximum(), self.get_global_properties().configuration.min_transaction_cpu_usage, true );
-                  if (trace && trace->except) throw *trace->except;
-               } catch( ... ) {
-                  elog( "on gas transaction failed due to a bad allocation" );
-                  EOS_ASSERT(false, transaction_exception, "on gas transaction failed, gas is not enough");
-               }
+               pay_gas_transaction(gas, trx);
 
                transaction_receipt::status_enum s = (trx_context.delay == fc::seconds(0))
                                                     ? transaction_receipt::executed
@@ -840,8 +831,8 @@ ilog("cpu: ${cpu}, net: ${net}", ("cpu",trx_context.billed_cpu_time_us)("net",tr
             } else {
                transaction_receipt_header r;
                r.status = transaction_receipt::executed;
-               r.cpu_usage_us = trx_context.billed_cpu_time_us;
-               r.net_usage_words = trace->net_usage / 8;
+//               r.cpu_usage_us = trx_context.billed_cpu_time_us;
+//               r.net_usage_words = trace->net_usage / 8;
                trace->receipt = r;
             }
 
@@ -979,9 +970,9 @@ ilog("cpu: ${cpu}, net: ${net}", ("cpu",trx_context.billed_cpu_time_us)("net",tr
             if( receipt.trx.contains<packed_transaction>() ) {
                auto& pt = receipt.trx.get<packed_transaction>();
                auto mtrx = std::make_shared<transaction_metadata>(pt);
-               trace = push_transaction( mtrx, fc::time_point::maximum(), receipt.cpu_usage_us, true );
+               trace = push_transaction( mtrx, fc::time_point::maximum(), 0, true );//TODO
             } else if( receipt.trx.contains<transaction_id_type>() ) {
-               trace = push_scheduled_transaction( receipt.trx.get<transaction_id_type>(), fc::time_point::maximum(), receipt.cpu_usage_us, true );
+               trace = push_scheduled_transaction( receipt.trx.get<transaction_id_type>(), fc::time_point::maximum(), 0, true );//TODO
             } else {
                EOS_ASSERT( false, block_validate_exception, "encountered unexpected receipt type" );
             }
@@ -1353,26 +1344,54 @@ ilog("cpu: ${cpu}, net: ${net}", ("cpu",trx_context.billed_cpu_time_us)("net",tr
       return trx;
    }
 
-	 signed_transaction get_pay_gas_transaction(asset& gas, const account_name& payer)
+	 void pay_gas_transaction(asset& gas, const transaction_metadata_ptr& trx)
 	 {
+       if (gas == asset()) return;
+       if (trx->trx.actions.empty()) { //trx without action
+          gas = asset();
+          return;
+       }
+
+       EOS_ASSERT(trx->trx.actions[0].authorization.size(), transaction_exception, "need action authorization to pay gas");
+
+       auto payer = trx->trx.actions[0].authorization[0].actor; //TODO: who should pay, the 1st actor?
+       auto receiver = self.pending_block_state()->header.producer; // pay gas to current producer
+
+       if (payer == receiver) return;
+
+       int64_t unused;
+       int64_t net_weight;
+       int64_t cpu_weight;
+       resource_limits.get_account_limits( payer, unused, net_weight, cpu_weight );
+
+       if (net_weight < 0 && cpu_weight < 0) { // simple account
+          gas = asset();
+          return;
+       }
+
 		 action pay_gas_act;
 		 pay_gas_act.account = config::system_account_name;
 		 pay_gas_act.name = N(paygas);
 		 pay_gas_act.authorization = vector<permission_level>{{config::system_account_name, config::active_name},{payer, config::active_name}};
 
-		 if (payer == config::system_account_name || payer == self.pending_block_state()->header.producer) {
-		 	gas = asset();
-		 	return signed_transaction();
-		 }
-
 		 pay_gas_act.data = fc::raw::pack(gas_param{payer, gas, self.pending_block_state()->header.producer});
 
-		 signed_transaction trx;
-		 trx.actions.emplace_back(std::move(pay_gas_act));
-		 trx.set_reference_block(self.head_block_id());
-//		 trx.signatures = std::move(signatures);
-		 trx.expiration = self.pending_block_time() + fc::microseconds(999'999); // Round up to nearest second to avoid appearing expired
-		 return trx;
+		 signed_transaction pay_gas_trx;
+       pay_gas_trx.actions.emplace_back(std::move(pay_gas_act));
+       pay_gas_trx.set_reference_block(self.head_block_id());
+       pay_gas_trx.expiration = self.pending_block_time() + fc::microseconds(999'999); // Round up to nearest second to avoid appearing expired
+
+       try {
+          auto trx_meta = std::make_shared<transaction_metadata>( pay_gas_trx );
+          trx_meta->implicit = true;
+          auto trace = push_transaction( trx_meta, fc::time_point::maximum(), self.get_global_properties().configuration.min_transaction_cpu_usage, true );
+          if (trace && trace->except) {
+             throw *trace->except;
+          }
+       } catch( ... ) {
+          elog( "pay gas transaction failed due to a bad allocation" );
+          EOS_ASSERT(false, transaction_exception, "pay gas transaction failed, gas is not enough");
+       }
 	 }
 
 }; /// controller_impl
