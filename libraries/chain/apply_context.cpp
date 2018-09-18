@@ -303,14 +303,14 @@ void apply_context::schedule_deferred_transaction( const uint128_t& sender_id, a
 
    EOS_ASSERT( control.is_ram_billing_in_notify_allowed() || (receiver == act.account) || (receiver == payer) || privileged,
                subjective_block_production_exception, "Cannot charge RAM to other accounts during notify." );
-   trx_context.add_ram_usage( payer, (config::billable_size_v<generated_transaction_object> + trx_size) );
+//   trx_context.add_ram_usage( payer, (config::billable_size_v<generated_transaction_object> + trx_size) );
 }
 
 bool apply_context::cancel_deferred_transaction( const uint128_t& sender_id, account_name sender ) {
    auto& generated_transaction_idx = db.get_mutable_index<generated_transaction_multi_index>();
    const auto* gto = db.find<generated_transaction_object,by_sender_id>(boost::make_tuple(sender, sender_id));
    if ( gto ) {
-      trx_context.add_ram_usage( gto->payer, -(config::billable_size_v<generated_transaction_object> + gto->packed_trx.size()) );
+//      trx_context.add_ram_usage( gto->payer, -(config::billable_size_v<generated_transaction_object> + gto->packed_trx.size()) );
       generated_transaction_idx.remove(*gto);
    }
    return gto;
@@ -369,7 +369,7 @@ void apply_context::update_db_usage( const account_name& payer, int64_t delta ) 
          require_authorization( payer );
       }
    }
-   trx_context.add_ram_usage(payer, delta);
+//   trx_context.add_ram_usage(payer, delta);
 }
 
 

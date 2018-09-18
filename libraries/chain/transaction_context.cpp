@@ -87,7 +87,7 @@ namespace eosio { namespace chain {
       validate_ram_usage.reserve( bill_to_accounts.size() );
 
       // Update usage values of accounts to reflect new time
-      rl.update_account_usage( bill_to_accounts, block_timestamp_type(control.pending_block_time()).slot );
+      //rl.update_account_usage( bill_to_accounts, block_timestamp_type(control.pending_block_time()).slot );
 
       // Calculate the highest network usage and CPU time that all of the billed accounts can afford to be billed
       int64_t account_net_limit = 0;
@@ -218,9 +218,9 @@ namespace eosio { namespace chain {
       }
 
       auto& rl = control.get_mutable_resource_limits_manager();
-      for( auto a : validate_ram_usage ) {
-         rl.verify_account_ram_usage( a );
-      }
+//      for( auto a : validate_ram_usage ) {
+//        rl.verify_account_ram_usage( a );
+//      }
 
       // Calculate the new highest network usage and CPU time that all of the billed accounts can afford to be billed
       int64_t account_net_limit = 0;
@@ -381,7 +381,7 @@ namespace eosio { namespace chain {
 
    void transaction_context::add_ram_usage( account_name account, int64_t ram_delta ) {
       auto& rl = control.get_mutable_resource_limits_manager();
-      rl.add_pending_ram_usage( account, ram_delta );
+//      rl.add_pending_ram_usage( account, ram_delta );
       if( ram_delta > 0 ) {
          validate_ram_usage.insert( account );
       }
@@ -461,7 +461,7 @@ namespace eosio { namespace chain {
         trx_size = gto.set( trx );
       });
 
-      add_ram_usage( cgto.payer, (config::billable_size_v<generated_transaction_object> + trx_size) );
+//      add_ram_usage( cgto.payer, (config::billable_size_v<generated_transaction_object> + trx_size) );
    }
 
    void transaction_context::record_transaction( const transaction_id_type& id, fc::time_point_sec expire ) {

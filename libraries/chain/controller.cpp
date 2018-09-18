@@ -417,8 +417,8 @@ struct controller_impl {
       ram_delta += owner_permission.auth.get_billable_size();
       ram_delta += active_permission.auth.get_billable_size();
 
-      resource_limits.add_pending_ram_usage(name, ram_delta);
-      resource_limits.verify_account_ram_usage(name);
+//      resource_limits.add_pending_ram_usage(name, ram_delta);
+//      resource_limits.verify_account_ram_usage(name);
    }
 
    void initialize_database() {
@@ -560,10 +560,10 @@ struct controller_impl {
    }
 
    void remove_scheduled_transaction( const generated_transaction_object& gto ) {
-      resource_limits.add_pending_ram_usage(
-         gto.payer,
-         -(config::billable_size_v<generated_transaction_object> + gto.packed_trx.size())
-      );
+//      resource_limits.add_pending_ram_usage(
+//         gto.payer,
+//         -(config::billable_size_v<generated_transaction_object> + gto.packed_trx.size())
+//      );
       // No need to verify_account_ram_usage since we are only reducing memory
 
       db.remove( gto );
@@ -713,7 +713,7 @@ struct controller_impl {
 
          if( !explicit_billed_cpu_time ) {
             auto& rl = self.get_mutable_resource_limits_manager();
-            rl.update_account_usage( trx_context.bill_to_accounts, block_timestamp_type(self.pending_block_time()).slot );
+            //rl.update_account_usage( trx_context.bill_to_accounts, block_timestamp_type(self.pending_block_time()).slot );
             int64_t account_cpu_limit = 0;
             std::tie( std::ignore, account_cpu_limit, std::ignore, std::ignore ) = trx_context.max_bandwidth_billed_accounts_can_pay( true );
 
@@ -722,8 +722,8 @@ struct controller_impl {
                                                                    trx_context.initial_objective_duration_limit.count()    ) );
          }
 
-         resource_limits.add_transaction_usage( trx_context.bill_to_accounts, cpu_time_to_bill_us, 0,
-                                                block_timestamp_type(self.pending_block_time()).slot ); // Should never fail
+//         resource_limits.add_transaction_usage( trx_context.bill_to_accounts, cpu_time_to_bill_us, 0,
+//                                                block_timestamp_type(self.pending_block_time()).slot ); // Should never fail
 
          trace->receipt = push_receipt(gtrx.trx_id, transaction_receipt::hard_fail, 0);
 
@@ -1174,7 +1174,7 @@ ilog("cpu: ${cpu}, net: ${net}", ("cpu",trx_context.billed_cpu_time_us)("net",tr
       */
 
       // Update resource limits:
-      resource_limits.process_account_limit_updates();
+//      resource_limits.process_account_limit_updates();
       const auto& chain_config = self.get_global_properties().configuration;
       uint32_t max_virtual_mult = 1000;
       uint64_t CPU_TARGET = EOS_PERCENT(chain_config.max_block_cpu_usage, chain_config.target_block_cpu_usage_pct);
@@ -1182,7 +1182,7 @@ ilog("cpu: ${cpu}, net: ${net}", ("cpu",trx_context.billed_cpu_time_us)("net",tr
          { CPU_TARGET, chain_config.max_block_cpu_usage, config::block_cpu_usage_average_window_ms / config::block_interval_ms, max_virtual_mult, {99, 100}, {1000, 999}},
          {EOS_PERCENT(chain_config.max_block_net_usage, chain_config.target_block_net_usage_pct), chain_config.max_block_net_usage, config::block_size_average_window_ms / config::block_interval_ms, max_virtual_mult, {99, 100}, {1000, 999}}
       );
-      resource_limits.process_block_usage(pending->_pending_block_state->block_num);
+//      resource_limits.process_block_usage(pending->_pending_block_state->block_num);
 
       set_action_merkle();
       set_trx_merkle();
