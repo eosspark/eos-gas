@@ -22,13 +22,14 @@ namespace eosio { namespace chain {
       transaction_receipt_header( status_enum s ):status(s){}
 
       friend inline bool operator ==( const transaction_receipt_header& lhs, const transaction_receipt_header& rhs ) {
-         return std::tie(lhs.status, lhs.gas_usage) == std::tie(rhs.status, rhs.gas_usage);
+         return std::tie(lhs.status, lhs.time_usage, lhs.gas_usage) == std::tie(rhs.status, rhs.time_usage, rhs.gas_usage);
       }
 
       fc::enum_type<uint8_t,status_enum>   status;
-//      uint32_t                             cpu_usage_us; ///< total billed CPU usage (microseconds)
-//      fc::unsigned_int                     net_usage_words; ///<  total billed NET usage, so we can reconstruct resource state when skipping context free data... hard failures...
-      int64_t                              gas_usage = 0; ///< total gas usage
+//    uint32_t                             cpu_usage_us; ///< total billed CPU usage (microseconds)
+//    fc::unsigned_int                     net_usage_words; ///<  total billed NET usage, so we can reconstruct resource state when skipping context free data... hard failures...
+      uint32_t                             time_usage = 0;
+      uint64_t                             gas_usage = 0; ///< total gas usage
    };
 
    struct transaction_receipt : public transaction_receipt_header {
@@ -42,7 +43,8 @@ namespace eosio { namespace chain {
       digest_type digest()const {
          digest_type::encoder enc;
          fc::raw::pack( enc, status );
-//         fc::raw::pack( enc, cpu_usage_us );
+         fc::raw::pack( enc, time_usage );
+         fc::raw::pack( enc, gas_usage );
 //         fc::raw::pack( enc, net_usage_words );
          if( trx.contains<transaction_id_type>() )
             fc::raw::pack( enc, trx.get<transaction_id_type>() );
@@ -77,6 +79,6 @@ namespace eosio { namespace chain {
 FC_REFLECT_ENUM( eosio::chain::transaction_receipt::status_enum,
                  (executed)(soft_fail)(hard_fail)(delayed)(expired) )
 
-FC_REFLECT(eosio::chain::transaction_receipt_header, (status)(gas_usage) )
+FC_REFLECT(eosio::chain::transaction_receipt_header, (status)(time_usage)(gas_usage) )
 FC_REFLECT_DERIVED(eosio::chain::transaction_receipt, (eosio::chain::transaction_receipt_header), (trx) )
 FC_REFLECT_DERIVED(eosio::chain::signed_block, (eosio::chain::signed_block_header), (transactions)(block_extensions) )

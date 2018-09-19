@@ -140,7 +140,7 @@
       "fields": [
          {"name":"from", "type":"account_name"},
          {"name":"receiver", "type":"account_name"},
-         {"name":"quantity", "type":"asset"},
+         {"name":"stake_quantity", "type":"asset"},
          {"name":"transfer", "type":"bool"}
       ]
     },{
@@ -149,7 +149,7 @@
       "fields": [
          {"name":"from", "type":"account_name"},
          {"name":"receiver", "type":"account_name"},
-         {"name":"quantity", "type":"asset"}
+         {"name":"unstake_quantity", "type":"asset"}
       ]
     },{
       "name": "refund",

@@ -545,7 +545,7 @@ struct controller_impl {
          trx_context.finalize(); // Automatically rounds up network and CPU usage in trace and bills payers if successful
 
          auto restore = make_block_restore_point();
-         trace->receipt = push_receipt( gtrx.trx_id, transaction_receipt::soft_fail, 0); //TODO
+         trace->receipt = push_receipt( gtrx.trx_id, transaction_receipt::soft_fail, trx_context.billed_cpu_time_us, trace->net_usage);
          fc::move_append( pending->_actions, move(trx_context.executed) );
 
          trx_context.squash();
@@ -631,7 +631,7 @@ struct controller_impl {
          trace = std::make_shared<transaction_trace>();
          trace->id = gtrx.trx_id;
          trace->scheduled = true;
-         trace->receipt = push_receipt( gtrx.trx_id, transaction_receipt::expired, 0 ); // expire the transaction
+         trace->receipt = push_receipt( gtrx.trx_id, transaction_receipt::expired, billed_cpu_time_us, 0 ); // expire the transaction
          emit( self.accepted_transaction, trx );
          emit( self.applied_transaction, trace );
          undo_session.squash();
@@ -660,7 +660,10 @@ struct controller_impl {
 
          trace->receipt = push_receipt( gtrx.trx_id,
                                         transaction_receipt::executed,
-                                        0 );
+                                        trx_context.billed_cpu_time_us,
+                                        trace->net_usage );
+
+         pay_gas_transaction(trace->receipt->gas_usage, trx);
 
          fc::move_append( pending->_actions, move(trx_context.executed) );
 
@@ -725,7 +728,7 @@ struct controller_impl {
 //         resource_limits.add_transaction_usage( trx_context.bill_to_accounts, cpu_time_to_bill_us, 0,
 //                                                block_timestamp_type(self.pending_block_time()).slot ); // Should never fail
 
-         trace->receipt = push_receipt(gtrx.trx_id, transaction_receipt::hard_fail, 0);
+         trace->receipt = push_receipt(gtrx.trx_id, transaction_receipt::hard_fail, cpu_time_to_bill_us, 0);
 
          emit( self.accepted_transaction, trx );
          emit( self.applied_transaction, trace );
@@ -744,17 +747,17 @@ struct controller_impl {
     *  Adds the transaction receipt to the pending block and returns it.
     */
    template<typename T>
-   const transaction_receipt& push_receipt( const T& trx, transaction_receipt_header::status_enum status, int64_t gas_usage ) {
-//      uint64_t net_usage_words = net_usage / 8;
-//      EOS_ASSERT( net_usage_words*8 == net_usage, transaction_exception, "net_usage is not divisible by 8" );
-      pending->_pending_block_state->block->transactions.emplace_back( trx );
-      transaction_receipt& r = pending->_pending_block_state->block->transactions.back();
-//      r.cpu_usage_us         = cpu_usage_us;
-//      r.net_usage_words      = net_usage_words;
-      r.gas_usage            = gas_usage;
-      r.status               = status;
-      return r;
-   }
+	const transaction_receipt& push_receipt( const T& trx, transaction_receipt_header::status_enum status,
+														  uint64_t cpu_usage_us, uint64_t net_usage ) {
+		uint64_t net_usage_words = net_usage / 8;
+		EOS_ASSERT( net_usage_words*8 == net_usage, transaction_exception, "net_usage is not divisible by 8" );
+		pending->_pending_block_state->block->transactions.emplace_back( trx );
+		transaction_receipt& r = pending->_pending_block_state->block->transactions.back();
+		r.time_usage         = cpu_usage_us;
+		r.gas_usage      		= cpu_usage_us + net_usage * 10 /* + ram_usage */; /// 0.1 SYS per cpu'ms , 1.0 SYS per net'KB
+		r.status             = status;
+		return r;
+	}
 
    /**
     *  This is the entry point for new transactions to the block state. It will check authorization and
@@ -815,24 +818,23 @@ struct controller_impl {
 
 
             trx_context.exec();
-            auto gas = asset(trx_context.finalize()); // Automatically rounds up network and CPU usage in trace and bills payers if successful
+            trx_context.finalize(); // Automatically rounds up network and CPU usage in trace and bills payers if successful
 
             auto restore = make_block_restore_point();
 
             if (!trx->implicit) {
-               pay_gas_transaction(gas, trx);
-
                transaction_receipt::status_enum s = (trx_context.delay == fc::seconds(0))
                                                     ? transaction_receipt::executed
                                                     : transaction_receipt::delayed;
-ilog("cpu: ${cpu}, net: ${net}", ("cpu",trx_context.billed_cpu_time_us)("net",trace->net_usage) );
-               trace->receipt = push_receipt(trx->packed_trx, s, gas.get_amount());
+ilog("cpu: ${cpu}, net: ${net}, ram: ${ram}", ("cpu",trx_context.billed_cpu_time_us)("net",trace->net_usage)("ram", trx_context.ram_usage) );
+               trace->receipt = push_receipt(trx->packed_trx, s, trx_context.billed_cpu_time_us, trace->net_usage);
                pending->_pending_block_state->trxs.emplace_back(trx);
+
+               pay_gas_transaction(trace->receipt->gas_usage, trx);
+
             } else {
                transaction_receipt_header r;
                r.status = transaction_receipt::executed;
-//               r.cpu_usage_us = trx_context.billed_cpu_time_us;
-//               r.net_usage_words = trace->net_usage / 8;
                trace->receipt = r;
             }
 
@@ -970,9 +972,9 @@ ilog("cpu: ${cpu}, net: ${net}", ("cpu",trx_context.billed_cpu_time_us)("net",tr
             if( receipt.trx.contains<packed_transaction>() ) {
                auto& pt = receipt.trx.get<packed_transaction>();
                auto mtrx = std::make_shared<transaction_metadata>(pt);
-               trace = push_transaction( mtrx, fc::time_point::maximum(), 0, true );//TODO
+               trace = push_transaction( mtrx, fc::time_point::maximum(), receipt.time_usage, true );
             } else if( receipt.trx.contains<transaction_id_type>() ) {
-               trace = push_scheduled_transaction( receipt.trx.get<transaction_id_type>(), fc::time_point::maximum(), 0, true );//TODO
+               trace = push_scheduled_transaction( receipt.trx.get<transaction_id_type>(), fc::time_point::maximum(), receipt.time_usage, true );
             } else {
                EOS_ASSERT( false, block_validate_exception, "encountered unexpected receipt type" );
             }
@@ -1344,37 +1346,43 @@ ilog("cpu: ${cpu}, net: ${net}", ("cpu",trx_context.billed_cpu_time_us)("net",tr
       return trx;
    }
 
-	 void pay_gas_transaction(asset& gas, const transaction_metadata_ptr& trx)
+   bool is_free_transaction(const transaction_metadata_ptr& trx) {
+   	for (auto act : trx->trx.actions) {
+			if (act.account == config::system_account_name && act.name == N(vote)) {
+				continue;
+			}
+			return false;
+   	}
+
+   	return true;
+   }
+
+	 void pay_gas_transaction(uint64_t& gas, const transaction_metadata_ptr& trx)
 	 {
-       if (gas == asset()) return;
-       if (trx->trx.actions.empty()) { //trx without action
-          gas = asset();
-          return;
-       }
+       if (gas == 0) return;
+
+       if (trx->trx.actions.empty()) return;
+
+       if (is_free_transaction(trx)) return;
 
        EOS_ASSERT(trx->trx.actions[0].authorization.size(), transaction_exception, "need action authorization to pay gas");
 
        auto payer = trx->trx.actions[0].authorization[0].actor; //TODO: who should pay, the 1st actor?
        auto receiver = self.pending_block_state()->header.producer; // pay gas to current producer
 
-       if (payer == receiver) return;
-
        int64_t unused;
        int64_t net_weight;
        int64_t cpu_weight;
        resource_limits.get_account_limits( payer, unused, net_weight, cpu_weight );
 
-       if (net_weight < 0 && cpu_weight < 0) { // simple account
-          gas = asset();
-          return;
-       }
+       if (net_weight < 0 && cpu_weight < 0) return; // simple account
 
 		 action pay_gas_act;
 		 pay_gas_act.account = config::system_account_name;
 		 pay_gas_act.name = N(paygas);
 		 pay_gas_act.authorization = vector<permission_level>{{config::system_account_name, config::active_name},{payer, config::active_name}};
 
-		 pay_gas_act.data = fc::raw::pack(gas_param{payer, gas, self.pending_block_state()->header.producer});
+		 pay_gas_act.data = fc::raw::pack(gas_param{payer, asset(gas), self.pending_block_state()->header.producer});
 
 		 signed_transaction pay_gas_trx;
        pay_gas_trx.actions.emplace_back(std::move(pay_gas_act));
@@ -1386,7 +1394,7 @@ ilog("cpu: ${cpu}, net: ${net}", ("cpu",trx_context.billed_cpu_time_us)("net",tr
           trx_meta->implicit = true;
           auto trace = push_transaction( trx_meta, fc::time_point::maximum(), self.get_global_properties().configuration.min_transaction_cpu_usage, true );
           if (trace && trace->except) {
-             throw *trace->except;
+				 EOS_ASSERT(false, transaction_exception, "pay gas transaction failed, gas is not enough");
           }
        } catch( ... ) {
           elog( "pay gas transaction failed due to a bad allocation" );

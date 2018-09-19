@@ -318,6 +318,7 @@ fc::variant push_transaction( signed_transaction& trx, int32_t extra_kcpu = 1000
 fc::variant push_actions(std::vector<chain::action>&& actions, int32_t extra_kcpu, packed_transaction::compression_type compression = packed_transaction::none ) {
    signed_transaction trx;
    trx.actions = std::forward<decltype(actions)>(actions);
+//trx.delay_sec = 30; ///test 30's delay transaction
 
    return push_transaction(trx, extra_kcpu, compression);
 }
@@ -1176,7 +1177,7 @@ struct delegate_bandwidth_subcommand {
       auto delegate_bandwidth = actionRoot->add_subcommand("delegatebw", localized("Delegate bandwidth"));
       delegate_bandwidth->add_option("from", from_str, localized("The account to delegate bandwidth from"))->required();
       delegate_bandwidth->add_option("receiver", receiver_str, localized("The account to receive the delegated bandwidth"))->required();
-      delegate_bandwidth->add_option("quantity", stake_amount, localized("The amount of EOS to stake"))->required();
+      delegate_bandwidth->add_option("stake_quantity", stake_amount, localized("The amount of EOS to stake"))->required();
 //      delegate_bandwidth->add_option("stake_cpu_quantity", stake_cpu_amount, localized("The amount of EOS to stake for CPU bandwidth"))->required();
 //      delegate_bandwidth->add_option("--buyram", buy_ram_amount, localized("The amount of EOS to buyram"));
       delegate_bandwidth->add_flag("--transfer", transfer, localized("Transfer voting power and right to unstake EOS to receiver"));
@@ -1186,7 +1187,7 @@ struct delegate_bandwidth_subcommand {
          fc::variant act_payload = fc::mutable_variant_object()
                   ("from", from_str)
                   ("receiver", receiver_str)
-                  ("quantity", to_asset(stake_amount))
+                  ("stake_quantity", to_asset(stake_amount))
 //                  ("stake_cpu_quantity", to_asset(stake_cpu_amount))
                   ("transfer", transfer);
          std::vector<chain::action> acts{create_action({permission_level{from_str,config::active_name}}, config::system_account_name, N(delegatebw), act_payload)};
@@ -1654,6 +1655,14 @@ void get_account( const string& accountName, bool json_format ) {
 //            std::cout << std::endl;
 //         }
 //      }
+
+      if( res.self_delegated_bandwidth.is_object() ) {
+         staked = asset::from_string(res.self_delegated_bandwidth.get_object()["amount"].as_string());
+      }
+
+      if( res.refund_request.is_object() ) {
+         unstaking = asset::from_string(res.refund_request.get_object()["amount"].as_string());
+      }
 
       if( res.core_liquid_balance.valid() ) {
          std::cout << res.core_liquid_balance->get_symbol().name() << " balances: " << std::endl;

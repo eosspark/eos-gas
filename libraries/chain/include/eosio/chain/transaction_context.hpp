@@ -25,7 +25,7 @@ namespace eosio { namespace chain {
          void init_for_deferred_trx( fc::time_point published );
 
          void exec();
-         uint64_t finalize();
+		 	void finalize();
          void squash();
          void undo();
 
@@ -88,6 +88,8 @@ namespace eosio { namespace chain {
          int64_t                       billed_cpu_time_us = 0;
          bool                          explicit_billed_cpu_time = false;
 
+		   int64_t								ram_usage = 0; ///TODO: did ram need to calculate gas_usage?
+
       private:
          bool                          is_initialized = false;
 
@@ -108,6 +110,8 @@ namespace eosio { namespace chain {
          fc::time_point                pseudo_start;
          fc::microseconds              billed_time;
          fc::microseconds              billing_timer_duration_limit;
+
+
    };
 
 } }

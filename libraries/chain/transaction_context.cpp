@@ -205,7 +205,7 @@ namespace eosio { namespace chain {
       }
    }
 
-   uint64_t transaction_context::finalize() {
+   void transaction_context::finalize() {
       EOS_ASSERT( is_initialized, transaction_exception, "must first initialize" );
 
       if( is_input ) {
@@ -259,7 +259,6 @@ namespace eosio { namespace chain {
 //      rl.add_transaction_usage( bill_to_accounts, static_cast<uint64_t>(billed_cpu_time_us), net_usage,
 //                                block_timestamp_type(control.pending_block_time()).slot ); // Should never fail
 
-      return static_cast<uint64_t>(billed_cpu_time_us) + net_usage * 10;
    }
 
    void transaction_context::squash() {
@@ -346,45 +345,46 @@ namespace eosio { namespace chain {
    }
 
    void transaction_context::validate_cpu_usage_to_bill( int64_t billed_us, bool check_minimum )const {
-      if (!control.skip_trx_checks()) {
-         if( check_minimum ) {
-            const auto& cfg = control.get_global_properties().configuration;
-            EOS_ASSERT( billed_us >= cfg.min_transaction_cpu_usage, transaction_exception,
-                        "cannot bill CPU time less than the minimum of ${min_billable} us",
-                        ("min_billable", cfg.min_transaction_cpu_usage)("billed_cpu_time_us", billed_us)
-                      );
-         }
-
-         if( billing_timer_exception_code == block_cpu_usage_exceeded::code_value ) {
-            EOS_ASSERT( billed_us <= objective_duration_limit.count(),
-                        block_cpu_usage_exceeded,
-                        "billed CPU time (${billed} us) is greater than the billable CPU time left in the block (${billable} us)",
-                        ("billed", billed_us)("billable", objective_duration_limit.count())
-                      );
-         } else {
-            if (cpu_limit_due_to_greylist) {
-               EOS_ASSERT( billed_us <= objective_duration_limit.count(),
-                           greylist_cpu_usage_exceeded,
-                           "billed CPU time (${billed} us) is greater than the maximum greylisted billable CPU time for the transaction (${billable} us)",
-                           ("billed", billed_us)("billable", objective_duration_limit.count())
-               );
-            } else {
-               EOS_ASSERT( billed_us <= objective_duration_limit.count(),
-                           tx_cpu_usage_exceeded,
-                           "billed CPU time (${billed} us) is greater than the maximum billable CPU time for the transaction (${billable} us)",
-                           ("billed", billed_us)("billable", objective_duration_limit.count())
-                        );
-            }
-         }
-      }
+//      if (!control.skip_trx_checks()) {
+//         if( check_minimum ) {
+//            const auto& cfg = control.get_global_properties().configuration;
+//            EOS_ASSERT( billed_us >= cfg.min_transaction_cpu_usage, transaction_exception,
+//                        "cannot bill CPU time less than the minimum of ${min_billable} us",
+//                        ("min_billable", cfg.min_transaction_cpu_usage)("billed_cpu_time_us", billed_us)
+//                      );
+//         }
+//
+//         if( billing_timer_exception_code == block_cpu_usage_exceeded::code_value ) {
+//            EOS_ASSERT( billed_us <= objective_duration_limit.count(),
+//                        block_cpu_usage_exceeded,
+//                        "billed CPU time (${billed} us) is greater than the billable CPU time left in the block (${billable} us)",
+//                        ("billed", billed_us)("billable", objective_duration_limit.count())
+//                      );
+//         } else {
+//            if (cpu_limit_due_to_greylist) {
+//               EOS_ASSERT( billed_us <= objective_duration_limit.count(),
+//                           greylist_cpu_usage_exceeded,
+//                           "billed CPU time (${billed} us) is greater than the maximum greylisted billable CPU time for the transaction (${billable} us)",
+//                           ("billed", billed_us)("billable", objective_duration_limit.count())
+//               );
+//            } else {
+//               EOS_ASSERT( billed_us <= objective_duration_limit.count(),
+//                           tx_cpu_usage_exceeded,
+//                           "billed CPU time (${billed} us) is greater than the maximum billable CPU time for the transaction (${billable} us)",
+//                           ("billed", billed_us)("billable", objective_duration_limit.count())
+//                        );
+//            }
+//         }
+//      }
    }
 
    void transaction_context::add_ram_usage( account_name account, int64_t ram_delta ) {
       auto& rl = control.get_mutable_resource_limits_manager();
+      ram_usage += ram_delta;
 //      rl.add_pending_ram_usage( account, ram_delta );
-      if( ram_delta > 0 ) {
-         validate_ram_usage.insert( account );
-      }
+//      if( ram_delta > 0 ) {
+//         validate_ram_usage.insert( account );
+//      }
    }
 
    uint32_t transaction_context::update_billed_cpu_time( fc::time_point now ) {
