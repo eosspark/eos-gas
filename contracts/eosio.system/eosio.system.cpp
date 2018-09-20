@@ -2,11 +2,8 @@
 #include <eosiolib/dispatcher.hpp>
 
 #include "producer_pay.cpp"
-#include "delegate_bandwidth.cpp"
 #include "voting.cpp"
-#include "exchange_state.cpp"
-#include "action_pay.cpp"
-
+#include "eosio.system.bak/exchange_state.cpp"
 
 namespace eosiosystem {
 
@@ -171,11 +168,10 @@ EOSIO_ABI( eosiosystem::system_contract,
      (setparams)(setpriv)(rmvproducer)(bidname)
      // delegate_bandwidth.cpp
 //     (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
-     (delegatebw)(undelegatebw)(refund)
+//     (delegatebw)(undelegatebw)(refund)
      // voting.cpp
-     (regproducer)(unregprod)(voteproducer)(regproxy)
+     (regproducer)(unregprod)(vote)
+//     (regproducer)(unregprod)(voteproducer)(regproxy)
      // producer_pay.cpp
-     (onblock)(claimrewards)
-     // action_pay.cpp
-     (paygas)
+     (onblock)(paygas)(claimrewards)
 )

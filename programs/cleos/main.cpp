@@ -965,11 +965,13 @@ struct vote_producer_proxy_subcommand {
 
 struct vote_producers_subcommand {
    string voter_str;
+   string vote_stake;
    vector<eosio::name> producer_names;
 
    vote_producers_subcommand(CLI::App* actionRoot) {
       auto vote_producers = actionRoot->add_subcommand("prods", localized("Vote for one or more producers"));
       vote_producers->add_option("voter", voter_str, localized("The voting account"))->required();
+      vote_producers->add_option("stake", vote_stake, localized("The voting stake amount"))->required();
       vote_producers->add_option("producers", producer_names, localized("The account(s) to vote for. All options from this position and following will be treated as the producer list."))->required();
       add_standard_transaction_options(vote_producers);
 
@@ -979,9 +981,9 @@ struct vote_producers_subcommand {
 
          fc::variant act_payload = fc::mutable_variant_object()
                   ("voter", voter_str)
-                  ("proxy", "")
+                  ("stake", to_asset(vote_stake))
                   ("producers", producer_names);
-         send_actions({create_action({permission_level{voter_str,config::active_name}}, config::system_account_name, N(voteproducer), act_payload)});
+         send_actions({create_action({permission_level{voter_str,config::active_name}}, config::system_account_name, N(vote), act_payload)});
       });
    }
 };
@@ -1023,11 +1025,15 @@ struct approve_producer_subcommand {
                std::cerr << "Producer \"" << producer_name << "\" is already on the list." << std::endl;
                return;
             }
+            auto staked = res.rows[0]["staked"].as_int64();
+            if (staked == 0) {
+            	std::cerr << "unnecessary update for zero staked" << std::endl;
+            }
             fc::variant act_payload = fc::mutable_variant_object()
                ("voter", voter)
-               ("proxy", "")
+               ("stake", asset(staked))
                ("producers", prods);
-            send_actions({create_action({permission_level{voter,config::active_name}}, config::system_account_name, N(voteproducer), act_payload)});
+            send_actions({create_action({permission_level{voter,config::active_name}}, config::system_account_name, N(vote), act_payload)});
       });
    }
 };
@@ -1068,11 +1074,17 @@ struct unapprove_producer_subcommand {
                return;
             }
             prods.erase( it, prods.end() ); //should always delete only one element
+
+			   auto staked = res.rows[0]["staked"].as_int64();
+			   if (staked == 0) {
+			  	 std::cerr << "unnecessary update for zero staked" << std::endl;
+			   }
+
             fc::variant act_payload = fc::mutable_variant_object()
                ("voter", voter)
-               ("proxy", "")
+               ("stake", asset(staked))
                ("producers", prods);
-            send_actions({create_action({permission_level{voter,config::active_name}}, config::system_account_name, N(voteproducer), act_payload)});
+            send_actions({create_action({permission_level{voter,config::active_name}}, config::system_account_name, N(vote), act_payload)});
       });
    }
 };
@@ -1664,24 +1676,14 @@ void get_account( const string& accountName, bool json_format ) {
          unstaking = asset::from_string(res.refund_request.get_object()["amount"].as_string());
       }
 
-      if( res.core_liquid_balance.valid() ) {
-         std::cout << res.core_liquid_balance->get_symbol().name() << " balances: " << std::endl;
-         std::cout << indent << std::left << std::setw(11)
-                   << "liquid:" << std::right << std::setw(18) << *res.core_liquid_balance << std::endl;
-         std::cout << indent << std::left << std::setw(11)
-                   << "staked:" << std::right << std::setw(18) << staked << std::endl;
-         std::cout << indent << std::left << std::setw(11)
-                   << "unstaking:" << std::right << std::setw(18) << unstaking << std::endl;
-         std::cout << indent << std::left << std::setw(11) << "total:" << std::right << std::setw(18) << (*res.core_liquid_balance + staked + unstaking) << std::endl;
-         std::cout << std::endl;
-      }
-
       if ( res.voter_info.is_object() ) {
          auto& obj = res.voter_info.get_object();
          string proxy = obj["proxy"].as_string();
+         staked = asset(obj["staked"].as_int64());
+
          if ( proxy.empty() ) {
             auto& prods = obj["producers"].get_array();
-            std::cout << "producers:";
+            std::cout << "voted producers:";
             if ( !prods.empty() ) {
                for ( int i = 0; i < prods.size(); ++i ) {
                   if ( i%3 == 0 ) {
@@ -1697,6 +1699,19 @@ void get_account( const string& accountName, bool json_format ) {
             std::cout << "proxy:" << indent << proxy << std::endl;
          }
       }
+
+      if( res.core_liquid_balance.valid() ) {
+         std::cout << res.core_liquid_balance->get_symbol().name() << " balances: " << std::endl;
+         std::cout << indent << std::left << std::setw(11)
+                   << "liquid:" << std::right << std::setw(18) << *res.core_liquid_balance << std::endl;
+         std::cout << indent << std::left << std::setw(11)
+                   << "staked:" << std::right << std::setw(18) << staked << std::endl;
+//         std::cout << indent << std::left << std::setw(11)
+//                   << "unstaking:" << std::right << std::setw(18) << unstaking << std::endl;
+         std::cout << indent << std::left << std::setw(11) << "total:" << std::right << std::setw(18) << (*res.core_liquid_balance + staked + unstaking) << std::endl;
+         std::cout << std::endl;
+      }
+
       std::cout << std::endl;
    } else {
       std::cout << fc::json::to_pretty_string(json) << std::endl;
@@ -2980,21 +2995,21 @@ int main( int argc, char** argv ) {
 
    auto voteProducer = system->add_subcommand("voteproducer", localized("Vote for a producer"));
    voteProducer->require_subcommand();
-   auto voteProxy = vote_producer_proxy_subcommand(voteProducer);
+//   auto voteProxy = vote_producer_proxy_subcommand(voteProducer);
    auto voteProducers = vote_producers_subcommand(voteProducer);
    auto approveProducer = approve_producer_subcommand(voteProducer);
    auto unapproveProducer = unapprove_producer_subcommand(voteProducer);
 
    auto listProducers = list_producers_subcommand(system);
 
-   auto delegateBandWidth = delegate_bandwidth_subcommand(system);
-   auto undelegateBandWidth = undelegate_bandwidth_subcommand(system);
+//   auto delegateBandWidth = delegate_bandwidth_subcommand(system);
+//   auto undelegateBandWidth = undelegate_bandwidth_subcommand(system);
    auto listBandWidth = list_bw_subcommand(system);
    auto bidname = bidname_subcommand(system);
    auto bidnameinfo = bidname_info_subcommand(system);
 
-   auto biyram = buyram_subcommand(system);
-   auto sellram = sellram_subcommand(system);
+//   auto biyram = buyram_subcommand(system);
+//   auto sellram = sellram_subcommand(system);
 
    auto claimRewards = claimrewards_subcommand(system);
 

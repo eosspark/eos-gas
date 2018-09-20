@@ -9,7 +9,7 @@
 #include <eosiolib/time.hpp>
 #include <eosiolib/privileged.hpp>
 #include <eosiolib/singleton.hpp>
-#include <eosio.system/exchange_state.hpp>
+#include <eosio.system.bak/exchange_state.hpp>
 
 #include <string>
 
@@ -206,6 +206,8 @@ namespace eosiosystem {
          void unregprod( const account_name producer );
 
          void setram( uint64_t max_ram_size );
+
+         void vote(const account_name voter, const asset vote_stake, const std::vector<account_name>& producers);
 
          void voteproducer( const account_name voter, const account_name proxy, const std::vector<account_name>& producers );
 
